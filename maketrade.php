@@ -3,23 +3,28 @@ include_once'connect.php';
 
 function parseOptionSymbol($ticker) {
     // Extract parts of the ticker
-    // Expecting format like AAPL_052424C200
+    // Expecting format like AAPL_052424C200 or AAPL_052424P182.5
     list($underlying, $details) = explode('_', $ticker);
     $expiration = substr($details, 0, 6);  // MMDDYY
-    $type = substr($details, 6, 1);       // C or P
-    $strike = substr($details, 7);        // Strike as a number without leading zeros
+    $type = substr($details, 6, 1);        // C or P
+    $strike = substr($details, 7);         // Strike as a decimal number
 
     // Reformat the expiration from MMDDYY to YYMMDD
-    $expirationFormatted = substr($expiration, 4, 2) . substr($expiration, 0, 4);
+    $expirationFormatted = substr($expiration, 4, 2) . substr($expiration, 0, 2) . substr($expiration, 2, 2);
 
-    // Format the strike price as 8 characters, ensuring the last three are decimal places
-    // Multiply strike by 1000 instead of 100 to handle the strike as cents accurately
-    $strikeFormatted = sprintf('%08d', intval($strike) * 1000);
+    // Correctly handle and format the strike price
+    // The strike price needs to be formatted as an 8-character wide number with 3 decimal places, with no dot
+    // Convert the strike price from a decimal to an integer representation in cents
+    $strikeInCents = (float)$strike * 1000; // Convert to integer cents
+    $strikeFormatted = sprintf('%08d', $strikeInCents);
 
-    // Combine to Schwab's required format: [Symbol]  [YYMMDD][C/P][Strike]
-    $symbolFormatted = str_pad($underlying, 6, ' ', STR_PAD_RIGHT); // Pad the symbol to ensure it is 6 characters wide
+    // Combine to Schwab's required format: [Symbol][YYMMDD][C/P][Strike]
+    // Ensure the symbol is 6 characters wide, padded if necessary
+    $symbolFormatted = str_pad($underlying, 6, ' ', STR_PAD_RIGHT);
+
     return $symbolFormatted . $expirationFormatted . $type . $strikeFormatted;
 }
+
 
 
 
@@ -121,6 +126,8 @@ function selltoclose($ordertype,$price,$quantity,$ticker,$code1){//LIMIT, price,
         echo 'Curl error: ' . curl_error($ch);
     }
     curl_close($ch);
+	//$data = json_decode($result, true);
+	//print_r($data);
 }
 //selltoclose("LIMIT","0.50",1,"SPCE_110521P19",$code1);
 
